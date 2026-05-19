@@ -2006,7 +2006,7 @@
       STATE.ws.onopen = () => {
         STATE.connected = true; STATE.connecting = false;
         updateConn('connected');
-        sendWS({ type: 'init', adapter: STATE.currentAdapter || 'kimi', model: STATE.currentModel || 'moonshot-v1-8k' });
+        sendWS({ type: 'init', adapter: 'kimi', model: 'moonshot-v1-8k' });
         toast('已连接到服务器', 'ok');
       };
       STATE.ws.onmessage = (e) => {

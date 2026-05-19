@@ -283,7 +283,9 @@ function serveFile(
     if (options.cache) {
       const maxAge = options.cacheMaxAge ?? 3600;
       if (ext === '.html') {
-        headers['Cache-Control'] = 'public, max-age=0, must-revalidate';
+        headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+        headers['Pragma'] = 'no-cache';
+        headers['Expires'] = '0';
       } else if (['.js', '.css', '.mjs'].includes(ext)) {
         headers['Cache-Control'] = `public, max-age=${maxAge * 10}`;
       } else if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.woff', '.woff2', '.ttf', '.otf'].includes(ext)) {

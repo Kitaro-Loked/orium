@@ -58,7 +58,7 @@ program
   .action(async (options) => {
     if (options.yes) {
       console.log(`${C.cyan}Creating default configuration...${C.reset}`);
-      const { generateConfig, writeConfig, writeEnvFile, generateEnvFile } = await import('../src/setup/generators');
+      const { generateConfig, writeConfig, writeEnvFile, generateEnvFile } = await import('../src/setup/generators.js');
       const config = generateConfig({
         useCase: 'personal',
         adapters: {},
