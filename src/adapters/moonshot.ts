@@ -1,8 +1,65 @@
 /**
  * Orium - Moonshot AI (Kimi) Adapter
+ * Supports .cn domain with proper error handling.
  */
 
-import { ModelAdapter, CompletionRequest, CompletionResponse } from './base';
+import { ModelAdapter, CompletionRequest, CompletionResponse, ToolCall } from './base';
+import { safeFetch } from '../utils/http-client.js';
+import { logger } from '../utils/logger.js';
+
+interface MoonshotMessage {
+  role: string;
+  content: string;
+}
+
+interface MoonshotToolCall {
+  id: string;
+  type: string;
+  function: {
+    name: string;
+    arguments: string;
+  };
+}
+
+interface MoonshotChoice {
+  index: number;
+  message: {
+    role: string;
+    content: string;
+    tool_calls?: MoonshotToolCall[];
+  };
+  finish_reason: string;
+}
+
+interface MoonshotUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}
+
+interface MoonshotCompletionResponse {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: MoonshotChoice[];
+  usage: MoonshotUsage;
+}
+
+interface MoonshotStreamChunk {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: Array<{
+    index: number;
+    delta: {
+      role?: string;
+      content?: string;
+    };
+    finish_reason: string | null;
+  }>;
+}
 
 export class MoonshotAdapter extends ModelAdapter {
   readonly name = 'moonshot';
@@ -14,45 +71,55 @@ export class MoonshotAdapter extends ModelAdapter {
   ];
 
   private apiKey: string;
-  private baseUrl = 'https://api.moonshot.cn/v1';
+  private baseUrl: string;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, baseUrl?: string) {
     super();
     this.apiKey = apiKey;
+    // Default to .cn domain for Kimi
+    this.baseUrl = baseUrl || 'https://api.moonshot.cn/v1';
   }
 
   async complete(request: CompletionRequest): Promise<CompletionResponse> {
-    const res = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: request.model || 'moonshot-v1-8k',
-        messages: request.messages,
-        temperature: request.temperature ?? 0.7,
-        max_tokens: request.maxTokens,
-        tools: request.tools,
-        stream: false,
-      }),
-    });
+    const body = {
+      model: request.model || 'moonshot-v1-8k',
+      messages: request.messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+      temperature: request.temperature ?? 0.7,
+      max_tokens: request.maxTokens,
+      tools: request.tools,
+      stream: false,
+    };
 
-    if (!res.ok) {
-      throw new Error(`Moonshot error: ${res.status} ${await res.text()}`);
-    }
+    logger.debug('Moonshot complete request', { model: body.model, messageCount: body.messages.length });
 
-    const data = await res.json();
+    const { data } = await safeFetch<MoonshotCompletionResponse>(
+      `${this.baseUrl}/chat/completions`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        adapterName: this.name,
+        timeout: 60000,
+      }
+    );
+
     const choice = data.choices[0];
+    const toolCalls = choice.message.tool_calls?.map((tc): ToolCall => ({
+      id: tc.id,
+      name: tc.function.name,
+      arguments: this.safeParseJson(tc.function.arguments),
+    }));
 
     return {
       id: data.id,
       content: choice.message.content || '',
-      toolCalls: choice.message.tool_calls?.map((tc: any) => ({
-        id: tc.id,
-        name: tc.function.name,
-        arguments: JSON.parse(tc.function.arguments),
-      })),
+      toolCalls,
       usage: {
         promptTokens: data.usage?.prompt_tokens || 0,
         completionTokens: data.usage?.completion_tokens || 0,
@@ -65,19 +132,24 @@ export class MoonshotAdapter extends ModelAdapter {
     request: CompletionRequest,
     onChunk: (chunk: string) => void
   ): Promise<CompletionResponse> {
+    const body = {
+      model: request.model || 'moonshot-v1-8k',
+      messages: request.messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+      temperature: request.temperature ?? 0.7,
+      max_tokens: request.maxTokens,
+      stream: true,
+    };
+
     const res = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: request.model || 'moonshot-v1-8k',
-        messages: request.messages,
-        temperature: request.temperature ?? 0.7,
-        max_tokens: request.maxTokens,
-        stream: true,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
@@ -101,12 +173,12 @@ export class MoonshotAdapter extends ModelAdapter {
         const json = line.replace('data: ', '');
         if (json === '[DONE]') continue;
         try {
-          const parsed = JSON.parse(json);
+          const parsed = JSON.parse(json) as MoonshotStreamChunk;
           const delta = parsed.choices[0]?.delta?.content || '';
           fullContent += delta;
           onChunk(delta);
         } catch {
-          // ignore
+          // ignore malformed chunks
         }
       }
     }
@@ -120,12 +192,27 @@ export class MoonshotAdapter extends ModelAdapter {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const res = await fetch(`${this.baseUrl}/models`, {
-        headers: { Authorization: `Bearer ${this.apiKey}` },
-      });
-      return res.ok;
-    } catch {
+      const { data } = await safeFetch<{ data: Array<{ id: string }> }>(
+        `${this.baseUrl}/models`,
+        {
+          headers: { Authorization: `Bearer ${this.apiKey}` },
+          adapterName: this.name,
+          timeout: 10000,
+          maxRetries: 1,
+        }
+      );
+      return Array.isArray(data.data);
+    } catch (err) {
+      logger.warn('Moonshot health check failed', err);
       return false;
+    }
+  }
+
+  private safeParseJson(str: string): Record<string, unknown> {
+    try {
+      return JSON.parse(str) as Record<string, unknown>;
+    } catch {
+      return {};
     }
   }
 }

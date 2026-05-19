@@ -1,10 +1,13 @@
 /**
  * Orium - Smart Router
  * Automatically selects the best adapter based on cost, speed, availability.
+ * Now with concurrency limits and per-adapter rate limiting.
  */
 
 import { ModelAdapter, CompletionRequest, CompletionResponse } from '../adapters/base';
 import { adapters } from '../adapters/base';
+import { AdapterConcurrencyManager } from '../utils/concurrency.js';
+import { logger } from '../utils/logger.js';
 
 export interface RoutingStrategy {
   name: string;
@@ -24,8 +27,11 @@ export class SmartRouter {
   private metrics: Map<string, AdapterMetrics> = new Map();
   private strategies: Map<string, RoutingStrategy> = new Map();
   private defaultStrategy = 'fastest';
+  private concurrency: AdapterConcurrencyManager;
 
-  constructor() {
+  constructor(maxConcurrentPerAdapter = 5) {
+    this.concurrency = new AdapterConcurrencyManager(maxConcurrentPerAdapter);
+
     this.registerStrategy({
       name: 'fastest',
       select: (list) => {
@@ -118,7 +124,7 @@ export class SmartRouter {
   }
 
   /**
-   * Route a request to the best available adapter.
+   * Route a request to the best available adapter with concurrency control.
    */
   async route(
     request: CompletionRequest,
@@ -134,9 +140,13 @@ export class SmartRouter {
       throw new Error('No available adapter found');
     }
 
+    logger.debug(`Routing to ${selected.name} with strategy ${strategyName || this.defaultStrategy}`);
+
     const start = Date.now();
     try {
-      const response = await selected.complete(request);
+      const response = await this.concurrency.execute(selected.name, () =>
+        selected.complete(request)
+      );
       this.updateMetrics(selected.name, Date.now() - start, true);
       return { adapter: selected, response };
     } catch (err) {
@@ -168,12 +178,15 @@ export class SmartRouter {
       const start = Date.now();
 
       try {
-        const response = await selected.complete(request);
+        const response = await this.concurrency.execute(selected.name, () =>
+          selected.complete(request)
+        );
         this.updateMetrics(selected.name, Date.now() - start, true);
         return { adapter: selected, response };
       } catch (err) {
         this.updateMetrics(selected.name, Date.now() - start, false);
         lastError = err as Error;
+        logger.warn(`Adapter ${selected.name} failed, trying next...`, { error: lastError.message });
       }
     }
 
@@ -187,6 +200,13 @@ export class SmartRouter {
     return Array.from(this.metrics.values()).sort(
       (a, b) => b.successRate - a.successRate
     );
+  }
+
+  getConcurrencyStatus(): Array<{ adapter: string; available: number; waiting: number }> {
+    return adapters.list().map((name) => {
+      const limiter = this.concurrency.getLimiter(name);
+      return { adapter: name, available: limiter.available, waiting: limiter.waiting };
+    });
   }
 }
 

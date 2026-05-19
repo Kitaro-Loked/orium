@@ -19,28 +19,73 @@ export interface PlatformInfo {
   };
 }
 
+/** Get the global object safely across all runtimes */
+function getGlobalObject(): typeof globalThis {
+  if (typeof globalThis !== 'undefined') return globalThis;
+  if (typeof global !== 'undefined') return global as typeof globalThis;
+  if (typeof self !== 'undefined') return self as typeof globalThis;
+  if (typeof window !== 'undefined') return window as typeof globalThis;
+  return {} as typeof globalThis;
+}
+
 function detectRuntime(): Runtime {
-  // @ts-ignore
-  if (typeof Bun !== 'undefined') return 'bun';
-  // @ts-ignore
-  if (typeof Deno !== 'undefined') return 'deno';
-  // @ts-ignore
-  if (typeof window !== 'undefined') return 'browser';
-  // @ts-ignore
-  if (typeof self !== 'undefined' && typeof importScripts === 'function') return 'worker';
-  // @ts-ignore
-  if (typeof EdgeRuntime !== 'undefined') return 'edge';
+  const g = getGlobalObject();
+
+  // Check Bun
+  if ('Bun' in g && (g as Record<string, unknown>).Bun !== undefined) {
+    return 'bun';
+  }
+
+  // Check Deno
+  if ('Deno' in g && (g as Record<string, unknown>).Deno !== undefined) {
+    return 'deno';
+  }
+
+  // Check Edge Runtime (Vercel, etc.)
+  if ('EdgeRuntime' in g) {
+    return 'edge';
+  }
+
+  // Check Node.js
+  const proc = (g as Record<string, unknown>).process;
+  if (proc && typeof proc === 'object' && 'versions' in proc && ((proc as Record<string, unknown>).versions as Record<string, unknown>)?.node) {
+    return 'node';
+  }
+
+  // Check Web Worker
+  if ('importScripts' in g && typeof (g as Record<string, unknown>).importScripts === 'function') {
+    return 'worker';
+  }
+
+  // Check Browser (must be after worker/edge checks)
+  if ('window' in g && 'document' in g) {
+    return 'browser';
+  }
+
+  // Default to node for safety
   return 'node';
 }
 
 export function getPlatformInfo(): PlatformInfo {
   const runtime = detectRuntime();
+  const g = getGlobalObject();
+  const proc = (g as Record<string, unknown>).process;
+
+  let version = 'unknown';
+  let os = 'unknown';
+  let arch = 'unknown';
+
+  if (proc && typeof proc === 'object') {
+    version = String((proc as Record<string, unknown>).version || 'unknown');
+    os = String((proc as Record<string, unknown>).platform || 'unknown');
+    arch = String((proc as Record<string, unknown>).arch || 'unknown');
+  }
 
   return {
     runtime,
-    version: process?.version || 'unknown',
-    os: process?.platform || 'unknown',
-    arch: process?.arch || 'unknown',
+    version,
+    os,
+    arch,
     supports: {
       fs: runtime === 'node' || runtime === 'bun' || runtime === 'deno',
       net: runtime !== 'browser',
@@ -61,4 +106,12 @@ export function isBrowser(): boolean {
 
 export function isEdge(): boolean {
   return detectRuntime() === 'edge';
+}
+
+export function isBun(): boolean {
+  return detectRuntime() === 'bun';
+}
+
+export function isDeno(): boolean {
+  return detectRuntime() === 'deno';
 }

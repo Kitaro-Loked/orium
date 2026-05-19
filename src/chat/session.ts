@@ -1,11 +1,11 @@
 /**
  * Orium - Chat Session Manager
- * Manages multi-turn conversations with any adapter.
- * Supports: tool calling, image input, multi-adapter switching.
+ * Manages multi-turn conversations with memory limits and cleanup.
  */
 
 import type { ModelAdapter, CompletionRequest, Message, CompletionResponse, ToolDefinition, ToolCall } from '../adapters/base.js';
 import type { SkillRegistry } from '../skills/base.js';
+import { logger } from '../utils/logger.js';
 
 export interface ChatOptions {
   model?: string;
@@ -13,6 +13,7 @@ export interface ChatOptions {
   maxTokens?: number;
   systemPrompt?: string;
   enableTools?: boolean;
+  maxHistory?: number;
 }
 
 export interface ChatMessage {
@@ -32,9 +33,12 @@ export interface ToolResult {
   result: unknown;
 }
 
+/** Maximum messages before cleanup */
+const DEFAULT_MAX_HISTORY = 1000;
+
 export class ChatSession {
   private messages: ChatMessage[] = [];
-  private options: ChatOptions;
+  private options: ChatOptions & { temperature: number; maxTokens: number; systemPrompt: string; enableTools: boolean; maxHistory: number; };
   private adapter: ModelAdapter;
   private skillRegistry?: SkillRegistry;
   private toolResults: ToolResult[] = [];
@@ -47,6 +51,7 @@ export class ChatSession {
       maxTokens: 4096,
       systemPrompt: 'You are a helpful assistant.',
       enableTools: !!skillRegistry,
+      maxHistory: DEFAULT_MAX_HISTORY,
       ...options,
     };
 
@@ -103,7 +108,32 @@ export class ChatSession {
     this.options.enableTools = true;
   }
 
-  // ── Tool Support ──
+  // ── Memory Management ───────────────────────────────────────────
+
+  private enforceMemoryLimit(): void {
+    const max = this.options.maxHistory;
+    if (this.messages.length <= max) return;
+
+    // Keep system message if present
+    const systemMsg = this.messages[0]?.role === 'system' ? this.messages[0] : undefined;
+    const toRemove = this.messages.length - max;
+
+    if (systemMsg) {
+      // Remove from index 1, keeping system message
+      this.messages.splice(1, toRemove);
+    } else {
+      this.messages.splice(0, toRemove);
+    }
+
+    logger.debug(`ChatSession: trimmed ${toRemove} messages, current: ${this.messages.length}`);
+  }
+
+  private addMessage(msg: ChatMessage): void {
+    this.messages.push(msg);
+    this.enforceMemoryLimit();
+  }
+
+  // ── Tool Support ────────────────────────────────────────────────
 
   private getAvailableTools(): ToolDefinition[] | undefined {
     if (!this.options.enableTools || !this.skillRegistry) return undefined;
@@ -142,11 +172,12 @@ export class ChatSession {
       const result = await tool.handler(toolCall.arguments);
       return { toolCallId: toolCall.id, name: toolCall.name, result };
     } catch (err) {
+      logger.warn(`Tool execution failed: ${toolCall.name}`, err);
       return { toolCallId: toolCall.id, name: toolCall.name, result: { error: String(err) } };
     }
   }
 
-  // ── Send with Tool Loop ──
+  // ── Send with Tool Loop ─────────────────────────────────────────
 
   async send(message: string, imageUrl?: string): Promise<ChatMessage> {
     const userMsg: ChatMessage = {
@@ -156,7 +187,7 @@ export class ChatSession {
       timestamp: new Date(),
       imageUrl,
     };
-    this.messages.push(userMsg);
+    this.addMessage(userMsg);
 
     return this._completeWithTools();
   }
@@ -187,7 +218,7 @@ export class ChatSession {
         usage: response.usage,
         toolCalls: response.toolCalls,
       };
-      this.messages.push(assistantMsg);
+      this.addMessage(assistantMsg);
 
       // If no tool calls, we're done
       if (!response.toolCalls || response.toolCalls.length === 0) {
@@ -195,14 +226,12 @@ export class ChatSession {
       }
 
       // Execute tool calls
-      const results: ToolResult[] = [];
       for (const toolCall of response.toolCalls) {
         const result = await this.executeToolCall(toolCall);
-        results.push(result);
         this.toolResults.push(result);
 
         // Add tool result as a message
-        this.messages.push({
+        this.addMessage({
           id: `tool-${toolCall.id}`,
           role: 'tool',
           content: JSON.stringify(result.result),
@@ -214,6 +243,7 @@ export class ChatSession {
     }
 
     // Max iterations reached
+    logger.warn(`ChatSession: max tool iterations (${maxIterations}) reached`);
     return this.messages[this.messages.length - 1];
   }
 
@@ -227,7 +257,7 @@ export class ChatSession {
             { type: 'text', text: m.content },
             { type: 'image_url', image_url: { url: m.imageUrl } },
           ],
-        } as any;
+        } as unknown as Message;
       }
       return {
         role: m.role,
@@ -236,7 +266,7 @@ export class ChatSession {
     });
   }
 
-  // ── Streaming ──
+  // ── Streaming ───────────────────────────────────────────────────
 
   async *stream(message: string, imageUrl?: string): AsyncGenerator<string, ChatMessage, unknown> {
     const userMsg: ChatMessage = {
@@ -246,7 +276,7 @@ export class ChatSession {
       timestamp: new Date(),
       imageUrl,
     };
-    this.messages.push(userMsg);
+    this.addMessage(userMsg);
 
     const request: CompletionRequest = {
       messages: this._buildMessages(),
@@ -269,12 +299,12 @@ export class ChatSession {
       timestamp: new Date(),
       model: this.options.model || this.adapter.name,
     };
-    this.messages.push(assistantMsg);
+    this.addMessage(assistantMsg);
 
     return assistantMsg;
   }
 
-  // ── Utilities ──
+  // ── Utilities ───────────────────────────────────────────────────
 
   getTokenUsage(): { prompt: number; completion: number; total: number } {
     let prompt = 0;
@@ -306,6 +336,6 @@ export class ChatSession {
       ...m,
       timestamp: new Date(m.timestamp),
     }));
-    this.options = { ...data.options };
+    this.options = { ...this.options, ...data.options };
   }
 }

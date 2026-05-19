@@ -1,11 +1,13 @@
 /**
  * Orium - Multi-Agent Collaboration System
  * Inspired by CrewAI and LobeChat Agent Groups.
+ * Now with memory limits and better error handling.
  */
 
 import { EventEmitter } from 'events';
 import type { ModelAdapter, CompletionRequest } from '../adapters/base';
 import type { ToolSchema, ToolHandler } from '../tools/registry';
+import { logger } from '../utils/logger.js';
 
 export type CollaborationMode = 'sequential' | 'hierarchical' | 'parallel';
 
@@ -42,6 +44,9 @@ export interface DelegationDecision {
   assignedAgentId: string;
   reasoning: string;
 }
+
+/** Maximum task history to prevent memory leaks */
+const MAX_TASK_HISTORY = 1000;
 
 export class AgentTeam extends EventEmitter {
   private agents: Map<string, AgentDefinition> = new Map();
@@ -99,6 +104,18 @@ export class AgentTeam extends EventEmitter {
         throw new Error(`Unknown collaboration mode: ${this.mode}`);
     }
   }
+
+  // ── Memory Management ───────────────────────────────────────────
+
+  private recordResult(result: AgentTaskResult): void {
+    this.taskHistory.push(result);
+    if (this.taskHistory.length > MAX_TASK_HISTORY) {
+      const removed = this.taskHistory.splice(0, this.taskHistory.length - MAX_TASK_HISTORY);
+      logger.debug(`AgentTeam: trimmed ${removed.length} task history entries`);
+    }
+  }
+
+  // ── Execution Modes ─────────────────────────────────────────────
 
   private async executeSequential(tasks: AgentTask[]): Promise<AgentTaskResult[]> {
     const results: AgentTaskResult[] = [];
@@ -164,15 +181,16 @@ export class AgentTeam extends EventEmitter {
       temperature: 0.2,
     };
 
-    const response = await manager.adapter.complete(request);
     try {
+      const response = await manager.adapter.complete(request);
       const cleaned = response.content.replace(/```json\s*|\s*```/g, '').trim();
       return JSON.parse(cleaned) as DelegationDecision[];
-    } catch {
+    } catch (err) {
+      logger.warn('Delegation parsing failed, using fallback', err);
       return tasks.map((t) => ({
         taskId: t.id,
         assignedAgentId: this.listAgents().find((a) => a.id !== manager.id)?.id || manager.id,
-        reasoning: 'Fallback assignment',
+        reasoning: 'Fallback assignment due to parsing error',
       }));
     }
   }
@@ -181,6 +199,7 @@ export class AgentTeam extends EventEmitter {
     if (task.assignedTo) {
       const agent = this.agents.get(task.assignedTo);
       if (agent) return agent;
+      logger.warn(`Assigned agent '${task.assignedTo}' not found, using fallback`);
     }
     const candidates = Array.from(this.agents.values());
     if (candidates.length === 0) {
@@ -191,6 +210,7 @@ export class AgentTeam extends EventEmitter {
 
   private async runTask(agent: AgentDefinition, task: AgentTask): Promise<AgentTaskResult> {
     this.emit('task:started', { task, agent });
+    logger.debug(`Agent ${agent.id} starting task ${task.id}`);
 
     const toolDescriptions = agent.tools
       .map((t) => `- ${t.schema.name}: ${t.schema.description}`)
@@ -213,10 +233,12 @@ export class AgentTeam extends EventEmitter {
         output: response.content,
         metadata: { usage: response.usage },
       };
-      this.taskHistory.push(result);
+      this.recordResult(result);
       this.emit('task:completed', result);
+      logger.debug(`Agent ${agent.id} completed task ${task.id}`);
       return result;
     } catch (err) {
+      logger.error(`Agent ${agent.id} failed task ${task.id}`, err);
       const result: AgentTaskResult = {
         taskId: task.id,
         agentId: agent.id,
@@ -224,7 +246,7 @@ export class AgentTeam extends EventEmitter {
         output: '',
         metadata: { error: String(err) },
       };
-      this.taskHistory.push(result);
+      this.recordResult(result);
       this.emit('task:failed', result);
       return result;
     }
