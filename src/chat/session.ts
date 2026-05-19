@@ -258,6 +258,20 @@ export class ChatSession {
           ],
         } as unknown as Message;
       }
+      if (m.role === 'assistant' && m.toolCalls && m.toolCalls.length > 0) {
+        return {
+          role: 'assistant',
+          content: m.content,
+          tool_calls: m.toolCalls.map((tc) => ({
+            id: tc.id,
+            type: 'function',
+            function: {
+              name: tc.name,
+              arguments: JSON.stringify(tc.arguments),
+            },
+          })),
+        } as unknown as Message;
+      }
       if (m.role === 'tool' && m.toolCalls?.[0]) {
         return {
           role: 'tool',

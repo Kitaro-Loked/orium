@@ -83,10 +83,19 @@ export class MoonshotAdapter extends ModelAdapter {
   async complete(request: CompletionRequest): Promise<CompletionResponse> {
     const body: Record<string, unknown> = {
       model: request.model || 'moonshot-v1-8k',
-      messages: request.messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
+      messages: request.messages.map((m) => {
+        const msg: Record<string, unknown> = {
+          role: m.role,
+          content: m.content,
+        };
+        if (m.tool_call_id) {
+          msg.tool_call_id = m.tool_call_id;
+        }
+        if (m.tool_calls) {
+          msg.tool_calls = m.tool_calls;
+        }
+        return msg;
+      }),
       temperature: request.temperature ?? 0.7,
       stream: false,
     };
