@@ -2026,29 +2026,49 @@
   function handleMsg(m) {
     switch (m.type) {
       case 'initialized':
-        STATE.currentAdapter = m.adapter; STATE.currentModel = m.model;
+        STATE.currentAdapter = m.adapter;
+        STATE.currentModel = m.model;
         updateBadge();
-        if (m.skills) { m.skills.forEach(n => { const s = STATE.skills.find(x => x.name === n); if (s) s.active = true; }); renderSkills(); }
         break;
       case 'response':
-        if (!streamMsg) { hideWelcome(); addMsg('assistant', m.content, m.id, m.model); }
-        else { finalize(m.content); }
-        STATE.isTyping = false; STATE.isStreaming = false; hideTyping();
+        hideTyping();
+        if (streamMsg) {
+          finalize(m.content);
+        } else {
+          addMsg('assistant', m.content, m.id, m.model);
+        }
+        STATE.isTyping = false;
         break;
-      case 'stream_start': STATE.isTyping = true; STATE.isStreaming = true; streamText = ''; showTyping(); break;
-      case 'stream_chunk': appendChunk(m.chunk); break;
-      case 'stream_end': finalize(m.content || streamText); STATE.isTyping = false; STATE.isStreaming = false; hideTyping(); break;
-      case 'tool_call': showTool(m.tool, m.arguments); break;
-      case 'tool_result': showToolRes(m.tool, m.result); break;
-      case 'error': showErr(m.error); STATE.isTyping = false; STATE.isStreaming = false; hideTyping(); break;
-      case 'history': loadHist(m.messages); break;
-      case 'cleared': clearMsgs(); break;
+      case 'stream_start':
+        streamText = '';
+        addMsg('assistant', '');
+        break;
+      case 'stream_chunk':
+        if (!streamMsg) addMsg('assistant', '');
+        streamText += m.chunk;
+        streamMsg.querySelector('.message-body').innerHTML = renderMd(streamText);
+        scrollBot();
+        break;
+      case 'stream_end':
+        hideTyping();
+        if (streamMsg) finalize(m.content || streamText);
+        STATE.isTyping = false;
+        break;
+      case 'error':
+        hideTyping();
+        addMsg('system', 'Error: ' + m.error);
+        STATE.isTyping = false;
+        break;
+      case 'history':
+        loadHist(m.messages);
+        break;
       case 'adapter_switched':
-        STATE.currentAdapter = m.adapter; STATE.currentModel = m.model;
+        STATE.currentAdapter = m.adapter;
+        STATE.currentModel = m.model;
         updateBadge();
-        sysMsg('已切换到 ' + m.adapter + (m.model ? ' (' + m.model + ')' : ''));
         break;
-      default: console.log('Unknown:', m);
+      default:
+        console.log('Unknown msg type:', m.type);
     }
   }
 
@@ -2118,12 +2138,21 @@
     const text = input.value.trim();
     if (!text || STATE.isTyping) return;
 
-    if (text.startsWith('/')) { handleCmd(text); input.value = ''; autoResize(); closeSlash(); return; }
+    if (text.startsWith('/')) {
+      handleCmd(text);
+      input.value = '';
+      autoResize();
+      closeSlash();
+      return;
+    }
 
     hideWelcome();
     addMsg('user', text);
-    input.value = ''; autoResize(); closeSlash();
-    STATE.isTyping = true; showTyping();
+    input.value = '';
+    autoResize();
+    closeSlash();
+    STATE.isTyping = true;
+    showTyping();
     sendWS({ type: 'message', content: text });
   }
 
@@ -2216,29 +2245,26 @@
       '<span class="message-name">' + name + '</span><span class="message-time">' + time + '</span>' +
       (model ? '<span class="message-model">' + model + '</span>' : '') + '</div>' +
       '<div class="message-body">' + (role === 'assistant' ? '' : renderMd(content)) + '</div></div>';
-    area.appendChild(el); scrollBot();
-    if (role === 'assistant') { streamMsg = el; streamText = ''; }
+    area.appendChild(el);
+    scrollBot();
+    if (role === 'assistant') {
+      streamMsg = el;
+      streamText = '';
+    }
     STATE.messages.push({ role, content, id, model, ts: Date.now() });
     return el;
   }
 
   function renderMd(c) { return c ? marked.parse(c, { breaks: true, gfm: true }) : ''; }
 
-  function appendChunk(chunk) {
-    if (!streamMsg) { hideWelcome(); addMsg('assistant', ''); }
-    streamText += chunk;
-    streamMsg.querySelector('.message-body').innerHTML = renderMd(streamText);
-    scrollBot();
-  }
-
   function finalize(content) {
-    if (streamMsg) {
-      const body = streamMsg.querySelector('.message-body');
-      body.innerHTML = renderMd(content || streamText);
-      addCodeBtns(body);
-      body.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b));
-    }
-    streamMsg = null; streamText = '';
+    if (!streamMsg) return;
+    const body = streamMsg.querySelector('.message-body');
+    body.innerHTML = renderMd(content || streamText);
+    addCodeBtns(body);
+    body.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b));
+    streamMsg = null;
+    streamText = '';
   }
 
   function addCodeBtns(container) {
