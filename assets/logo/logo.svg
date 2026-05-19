@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <!-- 主渐变 - 深海蓝到电光紫 -->
+    <linearGradient id="orbitGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0A2540"/>
+      <stop offset="50%" stop-color="#1E3A5F"/>
+      <stop offset="100%" stop-color="#6366F1"/>
+    </linearGradient>
+    
+    <!-- 核心发光渐变 -->
+    <radialGradient id="coreGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#818CF8"/>
+      <stop offset="50%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#4338CA"/>
+    </radialGradient>
+    
+    <!-- 轨道光晕 -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- 阴影 -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0A2540" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <!-- 背景圆 -->
+  <circle cx="100" cy="100" r="90" fill="url(#orbitGrad)" filter="url(#shadow)"/>
+  
+  <!-- 外层轨道环 -->
+  <ellipse cx="100" cy="100" rx="72" ry="72" 
+           fill="none" stroke="rgba(99,102,241,0.3)" stroke-width="1.5"
+           transform="rotate(-15 100 100)"/>
+  
+  <!-- 中层轨道环 -->
+  <ellipse cx="100" cy="100" rx="58" ry="58" 
+           fill="none" stroke="rgba(129,140,248,0.4)" stroke-width="1"
+           transform="rotate(30 100 100)"/>
+  
+  <!-- 内层轨道环 -->
+  <ellipse cx="100" cy="100" rx="44" ry="44" 
+           fill="none" stroke="rgba(165,180,252,0.5)" stroke-width="0.8"
+           transform="rotate(60 100 100)"/>
+  
+  <!-- 轨道上的节点 - 外层 -->
+  <circle cx="100" cy="28" r="5" fill="#818CF8" filter="url(#glow)"
+          transform="rotate(-15 100 100)"/>
+  <circle cx="100" cy="172" r="4" fill="#6366F1" filter="url(#glow)"
+          transform="rotate(-15 100 100)"/>
+  
+  <!-- 轨道上的节点 - 中层 -->
+  <circle cx="100" cy="42" r="4" fill="#A5B4FC" filter="url(#glow)"
+          transform="rotate(30 100 100)"/>
+  <circle cx="100" cy="158" r="3.5" fill="#818CF8" filter="url(#glow)"
+          transform="rotate(30 100 100)"/>
+  
+  <!-- 轨道上的节点 - 内层 -->
+  <circle cx="100" cy="56" r="3" fill="#C7D2FE" filter="url(#glow)"
+          transform="rotate(60 100 100)"/>
+  
+  <!-- 核心六边形 - 代表元素晶体结构 -->
+  <polygon points="100,62 118,72 118,92 100,102 82,92 82,72" 
+           fill="url(#coreGrad)" filter="url(#glow)"/>
+  
+  <!-- 核心内部小六边形 -->
+  <polygon points="100,70 110,76 110,88 100,94 90,88 90,76" 
+           fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
+  
+  <!-- 中心点 -->
+  <circle cx="100" cy="82" r="4" fill="#FFFFFF" filter="url(#glow)"/>
+  
+  <!-- 连接线 - 从核心到轨道 -->
+  <line x1="100" y1="102" x2="100" y2="116" stroke="rgba(129,140,248,0.3)" stroke-width="0.8"/>
+  <line x1="118" y1="92" x2="128" y2="104" stroke="rgba(129,140,248,0.3)" stroke-width="0.8"/>
+  <line x1="82" y1="92" x2="72" y2="104" stroke="rgba(129,140,248,0.3)" stroke-width="0.8"/>
+</svg>

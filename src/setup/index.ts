@@ -4,6 +4,12 @@
 
 export { runWizard, type WizardResult } from './wizard';
 export {
+  runOnboard,
+  runDoctor,
+  type OnboardOptions,
+  type OnboardResult,
+} from './onboard';
+export {
   generateConfig,
   generateYaml,
   generateEnvFile,

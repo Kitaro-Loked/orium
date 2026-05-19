@@ -8,6 +8,7 @@ import { Command } from 'commander';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { runWizard } from '../src/setup/wizard.js';
+import { runOnboard, runDoctor as runOnboardDoctor } from '../src/setup/onboard.js';
 import { startRepl } from '../src/chat/repl.js';
 import { ConfigLoader } from '../src/core/config-loader.js';
 import { AdapterRegistry } from '../src/adapters/base.js';
@@ -199,66 +200,7 @@ program
     console.log(`${C.gray}Use --list, --get, or --set${C.reset}`);
   });
 
-// ── doctor: Health Check ──
-program
-  .command('doctor')
-  .description('Check system health and adapter connectivity')
-  .action(async () => {
-    console.log(`${C.cyan}${C.bold}Orium Doctor${C.reset} ${C.gray}v${version}${C.reset}\n`);
 
-    const loader = new ConfigLoader();
-    loader.loadDefaults();
-    const config = loader.get();
-
-    const registry = new AdapterRegistry();
-    autoRegisterAdapters(registry, config);
-
-    const enabled = loader.getEnabledAdapters();
-
-    if (enabled.length === 0) {
-      console.log(`${C.yellow}⚠ No adapters configured.${C.reset}`);
-      console.log(`${C.gray}  Run 'orium init' to set up adapters.${C.reset}`);
-      return;
-    }
-
-    console.log(`${C.bold}Checking ${enabled.length} configured adapters...${C.reset}\n`);
-
-    let passed = 0;
-    let failed = 0;
-
-    for (const [name, adapterConfig] of enabled) {
-      process.stdout.write(`  ${name.padEnd(20)} `);
-      const adapter = registry.get(name);
-
-      if (!adapter) {
-        console.log(`${C.yellow}⚠ not registered${C.reset}`);
-        continue;
-      }
-
-      try {
-        const healthy = await adapter.healthCheck();
-        if (healthy) {
-          console.log(`${C.green}✓ healthy${C.reset}`);
-          passed++;
-        } else {
-          console.log(`${C.red}✗ unhealthy${C.reset}`);
-          failed++;
-        }
-      } catch (err) {
-        console.log(`${C.red}✗ error${C.reset} ${C.gray}(${err})${C.reset}`);
-        failed++;
-      }
-    }
-
-    console.log(`\n${C.bold}Results:${C.reset} ${C.green}${passed} passed${C.reset}, ${C.red}${failed} failed${C.reset}`);
-
-    if (failed > 0) {
-      console.log(`\n${C.yellow}Troubleshooting:${C.reset}`);
-      console.log(`  1. Check your API keys in .env.orium`);
-      console.log(`  2. Verify network connectivity`);
-      console.log(`  3. Run 'orium init' to reconfigure`);
-    }
-  });
 
 // ── adapters: List Adapters ──
 program
