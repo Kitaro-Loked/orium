@@ -2,5 +2,5 @@
  * Orium - Server Index
  */
 
-export { OriumServer, type ServerOptions } from './http.js';
-export { OriumWebSocketServer, type WSServerOptions } from './websocket.js';
+export { OriumServer, type ServerOptions } from './http';
+export { OriumWebSocketServer, type WSServerOptions } from './websocket';

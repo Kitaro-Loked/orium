@@ -6,11 +6,11 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'http';
 import { URL } from 'url';
-import type { AdapterRegistry, ModelAdapter } from '../adapters/base.js';
-import { ChatSession } from '../chat/session.js';
-import type { SkillRegistry } from '../skills/base.js';
-import { serveUI, diagnoseUI } from '../ui/index.js';
-import { logger } from '../utils/logger.js';
+import type { AdapterRegistry, ModelAdapter } from '../adapters/base';
+import { ChatSession } from '../chat/session';
+import type { SkillRegistry } from '../skills/base';
+import { serveUI, diagnoseUI } from '../ui/index';
+import { logger } from '../utils/logger';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',

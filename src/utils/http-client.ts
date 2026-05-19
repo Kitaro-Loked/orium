@@ -3,8 +3,8 @@
  * Wrapper around fetch with timeout, retry, and error handling.
  */
 
-import { AdapterError } from './errors.js';
-import { logger } from './logger.js';
+import { AdapterError } from './errors';
+import { logger } from './logger';
 
 export interface FetchOptions extends RequestInit {
   timeout?: number;

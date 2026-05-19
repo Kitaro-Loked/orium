@@ -156,12 +156,12 @@ export function serveUI(
 
   // Handle /ui/v3/* → latest UI
   if (url.startsWith('/ui/v3')) {
-    return serveUIVersion(req, res, UI_V3_DIR, url.slice(6), 'v3', { cache, cacheMaxAge });
+    return serveUIVersion(req, res, UI_V3_DIR, url.slice(7), 'v3', { cache, cacheMaxAge });
   }
 
   // Handle /ui/v2/* → legacy UI
   if (url.startsWith('/ui/v2')) {
-    return serveUIVersion(req, res, UI_V2_DIR, url.slice(6), 'v2', { cache, cacheMaxAge });
+    return serveUIVersion(req, res, UI_V2_DIR, url.slice(7), 'v2', { cache, cacheMaxAge });
   }
 
   // Handle /ui/* → original UI

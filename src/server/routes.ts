@@ -4,8 +4,8 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'http';
-import type { AdapterRegistry } from '../adapters/base.js';
-import type { SkillRegistry } from '../skills/base.js';
+import type { AdapterRegistry } from '../adapters/base';
+import type { SkillRegistry } from '../skills/base';
 
 // ── In-memory stores (replace with DB in production) ──
 interface Agent {

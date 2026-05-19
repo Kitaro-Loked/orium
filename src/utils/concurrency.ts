@@ -19,13 +19,17 @@ export class Semaphore {
     await new Promise<void>((resolve) => this.queue.push(resolve));
   }
 
-  release(): void {
-    const resolve = this.queue.shift();
-    if (resolve) {
-      resolve();
+  private resumeNext(): void {
+    const next = this.queue.shift();
+    if (next) {
+      next();
     } else {
       this.permits++;
     }
+  }
+
+  release(): void {
+    this.resumeNext();
   }
 
   get available(): number {

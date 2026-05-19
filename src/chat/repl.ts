@@ -4,12 +4,12 @@
  */
 
 import * as readline from 'readline';
-import type { ModelAdapter, AdapterRegistry } from '../adapters/base.js';
-import { ChatSession } from './session.js';
-import { ChatHistory } from './history.js';
-import { parseCommand, findCommand } from './commands.js';
-import type { CommandContext } from './commands.js';
-import type { SkillRegistry } from '../skills/base.js';
+import type { ModelAdapter, AdapterRegistry } from '../adapters/base';
+import { ChatSession } from './session';
+import { ChatHistory } from './history';
+import { parseCommand, findCommand } from './commands';
+import type { CommandContext } from './commands';
+import type { SkillRegistry } from '../skills/base';
 
 const C = {
   reset: '\x1b[0m',

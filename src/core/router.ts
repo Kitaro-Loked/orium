@@ -6,8 +6,8 @@
 
 import { ModelAdapter, CompletionRequest, CompletionResponse } from '../adapters/base';
 import { adapters } from '../adapters/base';
-import { AdapterConcurrencyManager } from '../utils/concurrency.js';
-import { logger } from '../utils/logger.js';
+import { AdapterConcurrencyManager } from '../utils/concurrency';
+import { logger } from '../utils/logger';
 
 export interface RoutingStrategy {
   name: string;

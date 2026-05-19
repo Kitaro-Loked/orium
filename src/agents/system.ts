@@ -7,7 +7,7 @@
 import { EventEmitter } from 'events';
 import type { ModelAdapter, CompletionRequest } from '../adapters/base';
 import type { ToolSchema, ToolHandler } from '../tools/registry';
-import { logger } from '../utils/logger.js';
+import { logger } from '../utils/logger';
 
 export type CollaborationMode = 'sequential' | 'hierarchical' | 'parallel';
 

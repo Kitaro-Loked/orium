@@ -5,9 +5,9 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
-import type { AdapterRegistry, ModelAdapter } from '../adapters/base.js';
-import { ChatSession } from '../chat/session.js';
-import type { SkillRegistry } from '../skills/base.js';
+import type { AdapterRegistry, ModelAdapter } from '../adapters/base';
+import { ChatSession } from '../chat/session';
+import type { SkillRegistry } from '../skills/base';
 
 export interface WSServerOptions {
   port?: number;
@@ -157,14 +157,12 @@ export class OriumWebSocketServer {
         this.send(client, { type: 'stream_start' });
 
         try {
-          while (true) {
-            const { done, value } = await stream.next();
-            if (done) {
-              this.send(client, { type: 'stream_end', content: value.content });
-              break;
-            }
-            this.send(client, { type: 'stream_chunk', chunk: value });
+          let fullContent = '';
+          for await (const chunk of stream) {
+            fullContent += chunk;
+            this.send(client, { type: 'stream_chunk', chunk });
           }
+          this.send(client, { type: 'stream_end', content: fullContent });
         } catch (err) {
           this.send(client, { type: 'error', error: String(err) });
         }

@@ -2,7 +2,7 @@
  * Orium - Utilities
  */
 
-export { logger, Logger } from './logger.js';
+export { logger, Logger } from './logger';
 export {
   OriumError,
   AdapterError,
@@ -10,5 +10,5 @@ export {
   ConfigError,
   TimeoutError,
   NotFoundError,
-} from './errors.js';
-export { safeFetch, healthCheck } from './http-client.js';
+} from './errors';
+export { safeFetch, healthCheck } from './http-client';

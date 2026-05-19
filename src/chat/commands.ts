@@ -3,10 +3,10 @@
  * Slash commands for the REPL chat interface.
  */
 
-import type { ChatSession } from './session.js';
-import type { ChatHistory } from './history.js';
-import type { AdapterRegistry, ModelAdapter } from '../adapters/base.js';
-import type { SkillRegistry } from '../skills/base.js';
+import type { ChatSession } from './session';
+import type { ChatHistory } from './history';
+import type { AdapterRegistry, ModelAdapter } from '../adapters/base';
+import type { SkillRegistry } from '../skills/base';
 
 export interface CommandContext {
   session: ChatSession;

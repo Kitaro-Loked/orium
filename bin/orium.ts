@@ -7,20 +7,20 @@
 import { Command } from 'commander';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { runWizard } from '../src/setup/wizard.js';
-import { runOnboard, runDoctor as runOnboardDoctor } from '../src/setup/onboard.js';
-import { startRepl } from '../src/chat/repl.js';
-import { ConfigLoader } from '../src/core/config-loader.js';
-import { AdapterRegistry } from '../src/adapters/base.js';
-import { autoRegisterAdapters } from '../src/adapters/index.js';
-import { OriumServer, OriumWebSocketServer } from '../src/server/index.js';
-import { SkillRegistry } from '../src/skills/base.js';
-import { TavilySkill } from '../src/skills/search/tavily.js';
-import { SerperSkill } from '../src/skills/search/serper.js';
-import { EastMoneySkill } from '../src/skills/finance/eastmoney.js';
-import { AlphaVantageSkill } from '../src/skills/finance/alphavantage.js';
-import { FirecrawlSkill } from '../src/skills/web/firecrawl.js';
-import { NobanaSkill } from '../src/skills/nobana.js';
+import { runWizard } from '../src/setup/wizard';
+import { runOnboard, runDoctor as runOnboardDoctor } from '../src/setup/onboard';
+import { startRepl } from '../src/chat/repl';
+import { ConfigLoader } from '../src/core/config-loader';
+import { AdapterRegistry } from '../src/adapters/base';
+import { autoRegisterAdapters } from '../src/adapters/index';
+import { OriumServer, OriumWebSocketServer } from '../src/server/index';
+import { SkillRegistry } from '../src/skills/base';
+import { TavilySkill } from '../src/skills/search/tavily';
+import { SerperSkill } from '../src/skills/search/serper';
+import { EastMoneySkill } from '../src/skills/finance/eastmoney';
+import { AlphaVantageSkill } from '../src/skills/finance/alphavantage';
+import { FirecrawlSkill } from '../src/skills/web/firecrawl';
+import { NobanaSkill } from '../src/skills/nobana';
 
 const C = {
   reset: '\x1b[0m',
@@ -58,7 +58,7 @@ program
   .action(async (options) => {
     if (options.yes) {
       console.log(`${C.cyan}Creating default configuration...${C.reset}`);
-      const { generateConfig, writeConfig, writeEnvFile, generateEnvFile } = await import('../src/setup/generators.js');
+      const { generateConfig, writeConfig, writeEnvFile, generateEnvFile } = await import('../src/setup/generators');
       const config = generateConfig({
         useCase: 'personal',
         adapters: {},

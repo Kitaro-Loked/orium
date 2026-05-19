@@ -3,9 +3,9 @@
  * Manages multi-turn conversations with memory limits and cleanup.
  */
 
-import type { ModelAdapter, CompletionRequest, Message, CompletionResponse, ToolDefinition, ToolCall } from '../adapters/base.js';
-import type { SkillRegistry } from '../skills/base.js';
-import { logger } from '../utils/logger.js';
+import type { ModelAdapter, CompletionRequest, Message, CompletionResponse, ToolDefinition, ToolCall } from '../adapters/base';
+import type { SkillRegistry } from '../skills/base';
+import { logger } from '../utils/logger';
 
 export interface ChatOptions {
   model?: string;

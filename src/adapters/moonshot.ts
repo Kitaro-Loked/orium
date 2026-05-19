@@ -4,8 +4,8 @@
  */
 
 import { ModelAdapter, CompletionRequest, CompletionResponse, ToolCall } from './base';
-import { safeFetch } from '../utils/http-client.js';
-import { logger } from '../utils/logger.js';
+import { safeFetch } from '../utils/http-client';
+import { logger } from '../utils/logger';
 
 interface MoonshotMessage {
   role: string;
