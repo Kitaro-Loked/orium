@@ -230,12 +230,12 @@ export class ChatSession {
         const result = await this.executeToolCall(toolCall);
         this.toolResults.push(result);
 
-        // Add tool result as a message
         this.addMessage({
           id: `tool-${toolCall.id}`,
           role: 'tool',
           content: JSON.stringify(result.result),
           timestamp: new Date(),
+          toolCalls: [{ id: toolCall.id, name: toolCall.name, arguments: {} }],
         });
       }
 
@@ -249,7 +249,6 @@ export class ChatSession {
 
   private _buildMessages(): Message[] {
     return this.messages.map((m) => {
-      // Handle image input
       if (m.imageUrl) {
         return {
           role: m.role,
@@ -258,6 +257,13 @@ export class ChatSession {
             { type: 'image_url', image_url: { url: m.imageUrl } },
           ],
         } as unknown as Message;
+      }
+      if (m.role === 'tool' && m.toolCalls?.[0]) {
+        return {
+          role: 'tool',
+          content: m.content,
+          tool_call_id: m.toolCalls[0].id,
+        } as Message;
       }
       return {
         role: m.role,
