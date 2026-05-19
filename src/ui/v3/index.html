@@ -2030,7 +2030,11 @@
         updateBadge();
         if (m.skills) { m.skills.forEach(n => { const s = STATE.skills.find(x => x.name === n); if (s) s.active = true; }); renderSkills(); }
         break;
-      case 'response': finalize(m.content); STATE.isTyping = false; STATE.isStreaming = false; hideTyping(); break;
+      case 'response':
+        if (!streamMsg) { hideWelcome(); addMsg('assistant', m.content, m.id, m.model); }
+        else { finalize(m.content); }
+        STATE.isTyping = false; STATE.isStreaming = false; hideTyping();
+        break;
       case 'stream_start': STATE.isTyping = true; STATE.isStreaming = true; streamText = ''; showTyping(); break;
       case 'stream_chunk': appendChunk(m.chunk); break;
       case 'stream_end': finalize(m.content || streamText); STATE.isTyping = false; STATE.isStreaming = false; hideTyping(); break;
