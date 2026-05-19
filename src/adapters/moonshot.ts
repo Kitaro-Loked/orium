@@ -81,19 +81,33 @@ export class MoonshotAdapter extends ModelAdapter {
   }
 
   async complete(request: CompletionRequest): Promise<CompletionResponse> {
-    const body = {
+    const body: Record<string, unknown> = {
       model: request.model || 'moonshot-v1-8k',
       messages: request.messages.map((m) => ({
         role: m.role,
         content: m.content,
       })),
       temperature: request.temperature ?? 0.7,
-      max_tokens: request.maxTokens,
-      tools: request.tools,
       stream: false,
     };
 
-    logger.debug('Moonshot complete request', { model: body.model, messageCount: body.messages.length });
+    // Only add optional fields if they are defined
+    if (request.maxTokens !== undefined) {
+      body.max_tokens = request.maxTokens;
+    }
+    // Moonshot only supports 'function' type tools, filter out empty/invalid ones
+    if (request.tools && request.tools.length > 0) {
+      body.tools = request.tools.map((t) => ({
+        type: 'function',
+        function: {
+          name: t.name,
+          description: t.description,
+          parameters: t.parameters,
+        },
+      }));
+    }
+
+    logger.debug('Moonshot complete request', { model: body.model, messageCount: request.messages.length });
 
     const { data } = await safeFetch<MoonshotCompletionResponse>(
       `${this.baseUrl}/chat/completions`,
