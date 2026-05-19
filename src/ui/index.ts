@@ -11,13 +11,19 @@ import type { IncomingMessage, ServerResponse } from 'http';
 // Get current directory safely (works in both ESM and CJS)
 function getCurrentDir(): string {
   try {
-    // ESM path - use eval to avoid TypeScript checking import.meta
-    const fileURLToPath = (require('url') as typeof import('url')).fileURLToPath;
-    return dirname(fileURLToPath((globalThis as Record<string, unknown>).__import_meta_url as string || `file://${process.cwd()}`));
+    // Try to detect if we're in dist/ or src/
+    if (typeof __dirname !== 'undefined') {
+      // In CJS, __dirname is available
+      // If we're in dist/src/ui, go up to project root
+      if (__dirname.includes('dist')) {
+        return resolve(__dirname, '..', '..');
+      }
+      return __dirname;
+    }
   } catch {
-    // CJS fallback
-    return (typeof __dirname !== 'undefined' ? __dirname : process.cwd());
+    // ignore
   }
+  return process.cwd();
 }
 
 /**
@@ -34,11 +40,13 @@ function resolveUIPath(): string {
     console.warn(`[UI] ORIUM_UI_PATH set but not found: ${envPath}`);
   }
 
-  // 2. From compiled module location (dist/ui/index.js → dist/ui or src/ui)
+  // 2. From compiled module location
+  // When compiled to dist/src/ui/index.js, we need to find src/ui
   const currentDir = getCurrentDir();
   const modulePaths = [
-    resolve(currentDir, '..', 'ui'),           // dist/ui
-    resolve(currentDir, '..', '..', 'src', 'ui'), // src/ui (from dist)
+    resolve(currentDir, 'src', 'ui'),           // project-root/src/ui
+    resolve(currentDir, '..', 'src', 'ui'),     // from dist/src/ui → ../src/ui
+    resolve(currentDir, '..', '..', 'src', 'ui'), // from dist/src/ui → ../../src/ui
     resolve(currentDir),                        // direct
   ];
   for (const p of modulePaths) {
