@@ -3,7 +3,17 @@ runtime:
   mode: hybrid
   workers: 4
   timeout: 30000
-adapters: {}
+adapters:
+  kimi:
+    enabled: true
+    type: moonshot
+    base_url: https://api.moonshot.cn/v1
+    api_key: ${KIMI_API_KEY}
+    models:
+      - kimi-latest
+      - kimi-k2
+      - kimi-k1.5
+    default: true
 routing:
   strategy: fastest
   failover: true

@@ -57,8 +57,8 @@ export abstract class ModelAdapter {
 export class AdapterRegistry {
   private adapters: Map<string, ModelAdapter> = new Map();
 
-  register(adapter: ModelAdapter): void {
-    this.adapters.set(adapter.name, adapter);
+  register(adapter: ModelAdapter, key?: string): void {
+    this.adapters.set(key || adapter.name, adapter);
   }
 
   get(name: string): ModelAdapter | undefined {

@@ -150,178 +150,224 @@ import { ProxyAdapter, proxyFactories } from './proxy';
 import { adapters } from './base';
 
 /**
- * Auto-register all available adapters from environment variables.
+ * Auto-register all available adapters from environment variables and config.
  */
 export function autoRegisterAdapters(registry?: import('./base').AdapterRegistry, config?: any): void {
   const target = registry || adapters;
-  // === Standard Cloud ===
+
+  // === Config-based adapters ===
+  if (config?.adapters) {
+    for (const [name, adapterConfig] of Object.entries(config.adapters)) {
+      const cfg = adapterConfig as any;
+      if (!cfg.enabled) continue;
+
+      const apiKey = cfg.apiKey || cfg.api_key;
+      const baseUrl = cfg.baseUrl || cfg.base_url;
+      const models = cfg.models || [];
+
+      // Register based on type or name
+      const type = cfg.type || name;
+
+      if (type === 'openai' || name === 'openai') {
+        target.register(new OpenAIAdapter(apiKey, baseUrl), name);
+      } else if (type === 'anthropic' || name === 'anthropic') {
+        target.register(new AnthropicAdapter(apiKey, baseUrl), name);
+      } else if (type === 'gemini' || name === 'gemini') {
+        target.register(new GeminiAdapter(apiKey), name);
+      } else if (type === 'moonshot' || name === 'moonshot' || name === 'kimi') {
+        const adapter = new MoonshotAdapter(apiKey);
+        if (baseUrl) (adapter as any).baseUrl = baseUrl;
+        if (models.length > 0) (adapter as any).supportedModels = models;
+        target.register(adapter, name);
+      } else if (type === 'deepseek' || name === 'deepseek') {
+        target.register(new DeepSeekAdapter(apiKey), name);
+      } else if (type === 'qwen' || name === 'qwen') {
+        target.register(new QwenAdapter(apiKey), name);
+      } else if (type === 'zhipu' || name === 'zhipu') {
+        target.register(new ZhipuAdapter(apiKey), name);
+      } else if (type === 'ollama' || name === 'ollama') {
+        target.register(new OllamaAdapter(baseUrl), name);
+      } else if (type === 'azure' || name === 'azure') {
+        // Azure needs endpoint and apiVersion
+      } else if (type === 'openrouter' || name === 'openrouter') {
+        target.register(new OpenRouterAdapter(apiKey), name);
+      } else {
+        // Generic OpenAI-compatible adapter
+        const adapter = new OpenAIAdapter(apiKey, baseUrl);
+        if (models.length > 0) (adapter as any).supportedModels = models;
+        target.register(adapter, name);
+      }
+    }
+  }
+
+  // === Standard Cloud (env vars) ===
   if (process.env.OPENAI_API_KEY) {
-    adapters.register(new OpenAIAdapter(process.env.OPENAI_API_KEY, process.env.OPENAI_BASE_URL));
+    target.register(new OpenAIAdapter(process.env.OPENAI_API_KEY, process.env.OPENAI_BASE_URL));
   }
   if (process.env.ANTHROPIC_API_KEY) {
-    adapters.register(new AnthropicAdapter(process.env.ANTHROPIC_API_KEY, process.env.ANTHROPIC_BASE_URL));
+    target.register(new AnthropicAdapter(process.env.ANTHROPIC_API_KEY, process.env.ANTHROPIC_BASE_URL));
   }
   if (process.env.GEMINI_API_KEY) {
-    adapters.register(new GeminiAdapter(process.env.GEMINI_API_KEY));
+    target.register(new GeminiAdapter(process.env.GEMINI_API_KEY));
   }
-  if (process.env.OLLAMA_BASE_URL || process.env.OLLAMA_AUTO_DETECT !== 'false') {
-    adapters.register(new OllamaAdapter(process.env.OLLAMA_BASE_URL));
+  if (process.env.OLLAMA_BASE_URL || process.env.OLLAMA_AUTO_DETECT === 'true') {
+    target.register(new OllamaAdapter(process.env.OLLAMA_BASE_URL));
   }
   if (process.env.AZURE_OPENAI_API_KEY && process.env.AZURE_OPENAI_ENDPOINT) {
-    adapters.register(new AzureOpenAIAdapter(
+    target.register(new AzureOpenAIAdapter(
       process.env.AZURE_OPENAI_API_KEY,
       process.env.AZURE_OPENAI_ENDPOINT,
       process.env.AZURE_OPENAI_API_VERSION
     ));
   }
   if (process.env.OPENROUTER_API_KEY) {
-    adapters.register(new OpenRouterAdapter(process.env.OPENROUTER_API_KEY));
+    target.register(new OpenRouterAdapter(process.env.OPENROUTER_API_KEY));
   }
   if (process.env.DEEPSEEK_API_KEY) {
-    adapters.register(new DeepSeekAdapter(process.env.DEEPSEEK_API_KEY));
+    target.register(new DeepSeekAdapter(process.env.DEEPSEEK_API_KEY));
   }
   if (process.env.COHERE_API_KEY) {
-    adapters.register(new CohereAdapter(process.env.COHERE_API_KEY));
+    target.register(new CohereAdapter(process.env.COHERE_API_KEY));
   }
   if (process.env.MISTRAL_API_KEY) {
-    adapters.register(new MistralAdapter(process.env.MISTRAL_API_KEY));
+    target.register(new MistralAdapter(process.env.MISTRAL_API_KEY));
   }
   if (process.env.GROQ_API_KEY) {
-    adapters.register(new GroqAdapter(process.env.GROQ_API_KEY));
+    target.register(new GroqAdapter(process.env.GROQ_API_KEY));
   }
   if (process.env.TOGETHER_API_KEY) {
-    adapters.register(new TogetherAdapter(process.env.TOGETHER_API_KEY));
+    target.register(new TogetherAdapter(process.env.TOGETHER_API_KEY));
   }
   if (process.env.QWEN_API_KEY) {
-    adapters.register(new QwenAdapter(process.env.QWEN_API_KEY));
+    target.register(new QwenAdapter(process.env.QWEN_API_KEY));
   }
   if (process.env.ZHIPU_API_KEY) {
-    adapters.register(new ZhipuAdapter(process.env.ZHIPU_API_KEY));
+    target.register(new ZhipuAdapter(process.env.ZHIPU_API_KEY));
   }
   if (process.env.MOONSHOT_API_KEY) {
-    adapters.register(new MoonshotAdapter(process.env.MOONSHOT_API_KEY));
+    target.register(new MoonshotAdapter(process.env.MOONSHOT_API_KEY));
   }
   if (process.env.PERPLEXITY_API_KEY) {
-    adapters.register(new PerplexityAdapter(process.env.PERPLEXITY_API_KEY));
+    target.register(new PerplexityAdapter(process.env.PERPLEXITY_API_KEY));
   }
   if (process.env.AI21_API_KEY) {
-    adapters.register(new AI21Adapter(process.env.AI21_API_KEY));
+    target.register(new AI21Adapter(process.env.AI21_API_KEY));
   }
   if (process.env.REPLICATE_API_TOKEN) {
-    adapters.register(new ReplicateAdapter(process.env.REPLICATE_API_TOKEN));
+    target.register(new ReplicateAdapter(process.env.REPLICATE_API_TOKEN));
   }
   if (process.env.FIREWORKS_API_KEY) {
-    adapters.register(new FireworksAdapter(process.env.FIREWORKS_API_KEY));
+    target.register(new FireworksAdapter(process.env.FIREWORKS_API_KEY));
   }
   if (process.env.NOVITA_API_KEY) {
-    adapters.register(new NovitaAdapter(process.env.NOVITA_API_KEY));
+    target.register(new NovitaAdapter(process.env.NOVITA_API_KEY));
   }
   if (process.env.SILICONFLOW_API_KEY) {
-    adapters.register(new SiliconFlowAdapter(process.env.SILICONFLOW_API_KEY));
+    target.register(new SiliconFlowAdapter(process.env.SILICONFLOW_API_KEY));
   }
   if (process.env.LINGYIWANWU_API_KEY) {
-    adapters.register(new LingyiwanwuAdapter(process.env.LINGYIWANWU_API_KEY));
+    target.register(new LingyiwanwuAdapter(process.env.LINGYIWANWU_API_KEY));
   }
   if (process.env.MINIMAX_API_KEY && process.env.MINIMAX_GROUP_ID) {
-    adapters.register(new MiniMaxAdapter(process.env.MINIMAX_API_KEY, process.env.MINIMAX_GROUP_ID));
+    target.register(new MiniMaxAdapter(process.env.MINIMAX_API_KEY, process.env.MINIMAX_GROUP_ID));
   }
   if (process.env.BAICHUAN_API_KEY) {
-    adapters.register(new BaichuanAdapter(process.env.BAICHUAN_API_KEY));
+    target.register(new BaichuanAdapter(process.env.BAICHUAN_API_KEY));
   }
   if (process.env.STEPFUN_API_KEY) {
-    adapters.register(new StepFunAdapter(process.env.STEPFUN_API_KEY));
+    target.register(new StepFunAdapter(process.env.STEPFUN_API_KEY));
   }
   if (process.env.XUNFEI_APP_ID && process.env.XUNFEI_API_KEY && process.env.XUNFEI_API_SECRET) {
-    adapters.register(new XunfeiAdapter(
+    target.register(new XunfeiAdapter(
       process.env.XUNFEI_APP_ID,
       process.env.XUNFEI_API_KEY,
       process.env.XUNFEI_API_SECRET
     ));
   }
   if (process.env.BAIDU_API_KEY && process.env.BAIDU_SECRET_KEY) {
-    adapters.register(new BaiduAdapter(process.env.BAIDU_API_KEY, process.env.BAIDU_SECRET_KEY));
+    target.register(new BaiduAdapter(process.env.BAIDU_API_KEY, process.env.BAIDU_SECRET_KEY));
   }
   if (process.env.DOUBAO_API_KEY) {
-    adapters.register(new DoubaoAdapter(process.env.DOUBAO_API_KEY));
+    target.register(new DoubaoAdapter(process.env.DOUBAO_API_KEY));
   }
   if (process.env.HUNYUAN_SECRET_ID && process.env.HUNYUAN_SECRET_KEY) {
-    adapters.register(new HunyuanAdapter(process.env.HUNYUAN_SECRET_ID, process.env.HUNYUAN_SECRET_KEY));
+    target.register(new HunyuanAdapter(process.env.HUNYUAN_SECRET_ID, process.env.HUNYUAN_SECRET_KEY));
   }
   if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
-    adapters.register(new BedrockAdapter(
+    target.register(new BedrockAdapter(
       process.env.AWS_ACCESS_KEY_ID,
       process.env.AWS_SECRET_ACCESS_KEY,
       process.env.AWS_REGION
     ));
   }
   if (process.env.CLOUDFLARE_API_TOKEN && process.env.CLOUDFLARE_ACCOUNT_ID) {
-    adapters.register(new CloudflareAdapter(process.env.CLOUDFLARE_API_TOKEN, process.env.CLOUDFLARE_ACCOUNT_ID));
+    target.register(new CloudflareAdapter(process.env.CLOUDFLARE_API_TOKEN, process.env.CLOUDFLARE_ACCOUNT_ID));
   }
   if (process.env.VERTEX_API_KEY && process.env.VERTEX_PROJECT_ID) {
-    adapters.register(new VertexAdapter(
+    target.register(new VertexAdapter(
       process.env.VERTEX_API_KEY,
       process.env.VERTEX_PROJECT_ID,
       process.env.VERTEX_LOCATION
     ));
   }
   if (process.env.WATSONX_API_KEY && process.env.WATSONX_PROJECT_ID) {
-    adapters.register(new WatsonxAdapter(
+    target.register(new WatsonxAdapter(
       process.env.WATSONX_API_KEY,
       process.env.WATSONX_PROJECT_ID,
       process.env.WATSONX_BASE_URL
     ));
   }
   if (process.env.NVIDIA_API_KEY) {
-    adapters.register(new NvidiaAdapter(process.env.NVIDIA_API_KEY));
+    target.register(new NvidiaAdapter(process.env.NVIDIA_API_KEY));
   }
   if (process.env.SAMBANOVA_API_KEY) {
-    adapters.register(new SambaNovaAdapter(process.env.SAMBANOVA_API_KEY));
+    target.register(new SambaNovaAdapter(process.env.SAMBANOVA_API_KEY));
   }
   if (process.env.CEREBRAS_API_KEY) {
-    adapters.register(new CerebrasAdapter(process.env.CEREBRAS_API_KEY));
+    target.register(new CerebrasAdapter(process.env.CEREBRAS_API_KEY));
   }
   if (process.env.FRIENDLI_API_KEY) {
-    adapters.register(new FriendliAIAdapter(process.env.FRIENDLI_API_KEY));
+    target.register(new FriendliAIAdapter(process.env.FRIENDLI_API_KEY));
   }
   if (process.env.HYPERBOLIC_API_KEY) {
-    adapters.register(new HyperbolicAdapter(process.env.HYPERBOLIC_API_KEY));
+    target.register(new HyperbolicAdapter(process.env.HYPERBOLIC_API_KEY));
   }
   if (process.env.LAMBDA_API_KEY) {
-    adapters.register(new LambdaAdapter(process.env.LAMBDA_API_KEY));
+    target.register(new LambdaAdapter(process.env.LAMBDA_API_KEY));
   }
   if (process.env.CHUTES_API_KEY) {
-    adapters.register(new ChutesAdapter(process.env.CHUTES_API_KEY));
+    target.register(new ChutesAdapter(process.env.CHUTES_API_KEY));
   }
   if (process.env.PPIO_API_KEY) {
-    adapters.register(new PPIOAdapter(process.env.PPIO_API_KEY));
+    target.register(new PPIOAdapter(process.env.PPIO_API_KEY));
   }
   if (process.env.VOLCENGINE_API_KEY) {
-    adapters.register(new VolcEngineAdapter(process.env.VOLCENGINE_API_KEY, process.env.VOLCENGINE_BASE_URL));
+    target.register(new VolcEngineAdapter(process.env.VOLCENGINE_API_KEY, process.env.VOLCENGINE_BASE_URL));
   }
 
   // === GitHub ===
   if (process.env.GITHUB_COPILOT_TOKEN) {
-    adapters.register(new GitHubCopilotAdapter(process.env.GITHUB_COPILOT_TOKEN));
+    target.register(new GitHubCopilotAdapter(process.env.GITHUB_COPILOT_TOKEN));
   }
   if (process.env.GITHUB_TOKEN || process.env.GITHUB_MODELS_TOKEN) {
-    adapters.register(new GitHubModelsAdapter(process.env.GITHUB_MODELS_TOKEN || process.env.GITHUB_TOKEN!));
+    target.register(new GitHubModelsAdapter(process.env.GITHUB_MODELS_TOKEN || process.env.GITHUB_TOKEN!));
   }
 
   // === IDE Integrations ===
   if (process.env.CURSOR_TOKEN) {
-    adapters.register(new CursorAdapter(process.env.CURSOR_TOKEN));
+    target.register(new CursorAdapter(process.env.CURSOR_TOKEN));
   }
   if (process.env.WINDSUF_API_KEY) {
-    adapters.register(new WindsurfAdapter(process.env.WINDSUF_API_KEY));
+    target.register(new WindsurfAdapter(process.env.WINDSUF_API_KEY));
   }
   if (process.env.CODEIUM_API_KEY) {
-    adapters.register(new CodeiumAdapter(process.env.CODEIUM_API_KEY));
+    target.register(new CodeiumAdapter(process.env.CODEIUM_API_KEY));
   }
   if (process.env.CONTINUE_SERVER_URL) {
-    adapters.register(new ContinueAdapter({ serverUrl: process.env.CONTINUE_SERVER_URL }));
+    target.register(new ContinueAdapter({ serverUrl: process.env.CONTINUE_SERVER_URL }));
   }
   if (process.env.AIDER_OPENAI_KEY || process.env.AIDER_ANTHROPIC_KEY) {
-    adapters.register(new AiderAdapter({
+    target.register(new AiderAdapter({
       openaiKey: process.env.AIDER_OPENAI_KEY,
       anthropicKey: process.env.AIDER_ANTHROPIC_KEY,
       geminiKey: process.env.AIDER_GEMINI_KEY,
@@ -329,69 +375,69 @@ export function autoRegisterAdapters(registry?: import('./base').AdapterRegistry
     }));
   }
   if (process.env.JETBRAINS_AI_TOKEN) {
-    adapters.register(new JetBrainsAdapter(process.env.JETBRAINS_AI_TOKEN));
+    target.register(new JetBrainsAdapter(process.env.JETBRAINS_AI_TOKEN));
   }
 
   // === Relays ===
   if (process.env.API2D_KEY) {
-    adapters.register(relayFactories.api2d(process.env.API2D_KEY));
+    target.register(relayFactories.api2d(process.env.API2D_KEY));
   }
   if (process.env.OHMYGPT_KEY) {
-    adapters.register(relayFactories.ohmygpt(process.env.OHMYGPT_KEY));
+    target.register(relayFactories.ohmygpt(process.env.OHMYGPT_KEY));
   }
   if (process.env.AIPROXY_KEY) {
-    adapters.register(relayFactories.aiproxy(process.env.AIPROXY_KEY));
+    target.register(relayFactories.aiproxy(process.env.AIPROXY_KEY));
   }
   if (process.env.CLOSEAI_KEY) {
-    adapters.register(relayFactories.closeai(process.env.CLOSEAI_KEY));
+    target.register(relayFactories.closeai(process.env.CLOSEAI_KEY));
   }
   if (process.env.ONEAPI_URL && process.env.ONEAPI_KEY) {
-    adapters.register(relayFactories.oneapi(process.env.ONEAPI_URL, process.env.ONEAPI_KEY));
+    target.register(relayFactories.oneapi(process.env.ONEAPI_URL, process.env.ONEAPI_KEY));
   }
   if (process.env.NEWAPI_URL && process.env.NEWAPI_KEY) {
-    adapters.register(relayFactories.newapi(process.env.NEWAPI_URL, process.env.NEWAPI_KEY));
+    target.register(relayFactories.newapi(process.env.NEWAPI_URL, process.env.NEWAPI_KEY));
   }
   if (process.env.VOAPI_KEY) {
-    adapters.register(relayFactories.voapi(process.env.VOAPI_KEY));
+    target.register(relayFactories.voapi(process.env.VOAPI_KEY));
   }
   if (process.env.AIHUB_KEY) {
-    adapters.register(relayFactories.aihub(process.env.AIHUB_KEY));
+    target.register(relayFactories.aihub(process.env.AIHUB_KEY));
   }
   if (process.env.GPTAPI_KEY) {
-    adapters.register(relayFactories.gptapi(process.env.GPTAPI_KEY));
+    target.register(relayFactories.gptapi(process.env.GPTAPI_KEY));
   }
   if (process.env.OPENAISB_KEY) {
-    adapters.register(relayFactories.openaisb(process.env.OPENAISB_KEY));
+    target.register(relayFactories.openaisb(process.env.OPENAISB_KEY));
   }
   if (process.env.AIKEY_KEY) {
-    adapters.register(relayFactories.aikey(process.env.AIKEY_KEY));
+    target.register(relayFactories.aikey(process.env.AIKEY_KEY));
   }
   if (process.env.GOAPI_KEY) {
-    adapters.register(relayFactories.goapi(process.env.GOAPI_KEY));
+    target.register(relayFactories.goapi(process.env.GOAPI_KEY));
   }
   if (process.env.APIGPT_KEY) {
-    adapters.register(relayFactories.apigpt(process.env.APIGPT_KEY));
+    target.register(relayFactories.apigpt(process.env.APIGPT_KEY));
   }
   if (process.env.CUSTOM_RELAY_URL && process.env.CUSTOM_RELAY_KEY) {
-    adapters.register(relayFactories.custom('custom-relay', process.env.CUSTOM_RELAY_URL, process.env.CUSTOM_RELAY_KEY));
+    target.register(relayFactories.custom('custom-relay', process.env.CUSTOM_RELAY_URL, process.env.CUSTOM_RELAY_KEY));
   }
 
   // === Free ===
   if (process.env.ENABLE_FREE_APIS === 'true') {
-    adapters.register(freeFactories.pollinations());
-    adapters.register(freeFactories.duckduckgo());
-    adapters.register(freeFactories.blackbox());
+    target.register(freeFactories.pollinations());
+    target.register(freeFactories.duckduckgo());
+    target.register(freeFactories.blackbox());
   }
   if (process.env.HUGGINGFACE_API_KEY) {
-    adapters.register(freeFactories.huggingfaceFree(process.env.HUGGINGFACE_API_KEY));
+    target.register(freeFactories.huggingfaceFree(process.env.HUGGINGFACE_API_KEY));
   }
   if (process.env.OPENROUTER_FREE_KEY) {
-    adapters.register(freeFactories.openrouterFree(process.env.OPENROUTER_FREE_KEY));
+    target.register(freeFactories.openrouterFree(process.env.OPENROUTER_FREE_KEY));
   }
 
   // === Enterprise ===
   if (process.env.INTERNAL_API_URL) {
-    adapters.register(enterpriseFactories.internal(
+    target.register(enterpriseFactories.internal(
       process.env.INTERNAL_API_URL,
       process.env.INTERNAL_API_KEY,
       process.env.INTERNAL_PROXY_URL
@@ -400,25 +446,25 @@ export function autoRegisterAdapters(registry?: import('./base').AdapterRegistry
 
   // === Local ===
   if (process.env.LM_STUDIO_URL) {
-    adapters.register(genericFactories.lmstudio(process.env.LM_STUDIO_URL));
+    target.register(genericFactories.lmstudio(process.env.LM_STUDIO_URL));
   }
   if (process.env.VLLM_URL) {
-    adapters.register(genericFactories.vllm(process.env.VLLM_URL));
+    target.register(genericFactories.vllm(process.env.VLLM_URL));
   }
   if (process.env.SGLANG_URL) {
-    adapters.register(genericFactories.sglang(process.env.SGLANG_URL));
+    target.register(genericFactories.sglang(process.env.SGLANG_URL));
   }
   if (process.env.LLAMACPP_URL) {
-    adapters.register(genericFactories.llamacpp(process.env.LLAMACPP_URL));
+    target.register(genericFactories.llamacpp(process.env.LLAMACPP_URL));
   }
   if (process.env.TABBY_API_URL && process.env.TABBY_API_KEY) {
-    adapters.register(genericFactories.tabby(process.env.TABBY_API_URL, process.env.TABBY_API_KEY));
+    target.register(genericFactories.tabby(process.env.TABBY_API_URL, process.env.TABBY_API_KEY));
   }
   if (process.env.ANYSCALE_API_KEY) {
-    adapters.register(genericFactories.anyscale(process.env.ANYSCALE_API_KEY));
+    target.register(genericFactories.anyscale(process.env.ANYSCALE_API_KEY));
   }
   if (process.env.PREDIBASE_API_KEY) {
-    adapters.register(genericFactories.predibase(process.env.PREDIBASE_API_KEY));
+    target.register(genericFactories.predibase(process.env.PREDIBASE_API_KEY));
   }
 }
 

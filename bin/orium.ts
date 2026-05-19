@@ -164,6 +164,93 @@ program
     });
   });
 
+// ── onboard: New Setup Experience (inspired by OpenClaw) ──
+program
+  .command('onboard')
+  .description('Interactive onboarding — the recommended setup path')
+  .option('-d, --install-daemon', 'Install gateway daemon (launchd/systemd)')
+  .option('-q, --quick', 'Quick setup with recommended defaults')
+  .option('--skip-wizard', 'Skip interactive wizard, use defaults')
+  .action(async (options) => {
+    try {
+      await runOnboard(version, {
+        installDaemon: options.installDaemon,
+        quick: options.quick,
+        skipWizard: options.skipWizard,
+      });
+    } catch (err) {
+      console.error(`${C.red}Onboarding failed:${C.reset}`, err);
+      process.exit(1);
+    }
+  });
+
+// ── doctor: Health Check ──
+program
+  .command('doctor')
+  .description('Check system health and adapter connectivity')
+  .option('--full', 'Run full diagnostics including system checks')
+  .action(async (options) => {
+    if (options.full) {
+      await runOnboardDoctor();
+      return;
+    }
+
+    console.log(`${C.cyan}${C.bold}Orium Doctor${C.reset} ${C.gray}v${version}${C.reset}\n`);
+
+    const loader = new ConfigLoader();
+    loader.loadDefaults();
+    const config = loader.get();
+
+    const registry = new AdapterRegistry();
+    autoRegisterAdapters(registry, config);
+
+    const enabled = loader.getEnabledAdapters();
+
+    if (enabled.length === 0) {
+      console.log(`${C.yellow}⚠ No adapters configured.${C.reset}`);
+      console.log(`${C.gray}  Run 'orium onboard' to set up adapters.${C.reset}`);
+      return;
+    }
+
+    console.log(`${C.bold}Checking ${enabled.length} configured adapters...${C.reset}\n`);
+
+    let passed = 0;
+    let failed = 0;
+
+    for (const [name, adapterConfig] of enabled) {
+      process.stdout.write(`  ${name.padEnd(20)} `);
+      const adapter = registry.get(name);
+
+      if (!adapter) {
+        console.log(`${C.yellow}⚠ not registered${C.reset}`);
+        continue;
+      }
+
+      try {
+        const healthy = await adapter.healthCheck();
+        if (healthy) {
+          console.log(`${C.green}✓ healthy${C.reset}`);
+          passed++;
+        } else {
+          console.log(`${C.red}✗ unhealthy${C.reset}`);
+          failed++;
+        }
+      } catch (err) {
+        console.log(`${C.red}✗ error${C.reset} ${C.gray}(${err})${C.reset}`);
+        failed++;
+      }
+    }
+
+    console.log(`\n${C.bold}Results:${C.reset} ${C.green}${passed} passed${C.reset}, ${C.red}${failed} failed${C.reset}`);
+
+    if (failed > 0) {
+      console.log(`\n${C.yellow}Troubleshooting:${C.reset}`);
+      console.log(`  1. Check your API keys in .env.orium`);
+      console.log(`  2. Verify network connectivity`);
+      console.log(`  3. Run 'orium onboard' to reconfigure`);
+    }
+  });
+
 // ── config: Configuration Management ──
 program
   .command('config')
@@ -199,8 +286,6 @@ program
 
     console.log(`${C.gray}Use --list, --get, or --set${C.reset}`);
   });
-
-
 
 // ── adapters: List Adapters ──
 program
