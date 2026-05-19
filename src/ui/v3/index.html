@@ -2032,8 +2032,8 @@
         break;
       case 'response':
         hideTyping();
-        if (streamMsg) { finalize(m.content); }
-        else { addMsg('assistant', m.content, m.id, m.model); }
+        if (!streamMsg) { addMsg('assistant', m.content, m.id, m.model); }
+        else { finalize(m.content); }
         STATE.isTyping = false; STATE.isStreaming = false;
         break;
       case 'stream_start': STATE.isTyping = true; STATE.isStreaming = true; streamText = ''; showTyping(); break;
