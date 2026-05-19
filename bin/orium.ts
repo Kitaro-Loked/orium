@@ -322,6 +322,7 @@ program
   .description('Start HTTP and WebSocket server')
   .option('-p, --port <port>', 'HTTP port', '3000')
   .option('-w, --ws-port <port>', 'WebSocket port', '3001')
+  .option('-H, --host <host>', 'Server host', '127.0.0.1')
   .option('-k, --api-key <key>', 'API key for authentication')
   .option('-a, --adapter <adapter>', 'Default adapter')
   .action(async (options) => {
@@ -359,6 +360,7 @@ program
 
     const httpServer = new OriumServer({
       port: httpPort,
+      host: options.host,
       adapterRegistry: registry,
       skillRegistry,
       defaultAdapter,
@@ -368,6 +370,7 @@ program
 
     const wsServer = new OriumWebSocketServer({
       port: wsPort,
+      host: options.host,
       adapterRegistry: registry,
       skillRegistry,
       defaultAdapter,

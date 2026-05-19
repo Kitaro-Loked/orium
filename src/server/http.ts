@@ -18,6 +18,7 @@ const CORS_HEADERS = {
 
 export interface ServerOptions {
   port?: number;
+  host?: string;
   adapterRegistry: AdapterRegistry;
   skillRegistry?: SkillRegistry;
   defaultAdapter?: string;
@@ -89,6 +90,7 @@ interface BatchJob {
 
 export class OriumServer {
   private port: number;
+  private host: string;
   private adapterRegistry: AdapterRegistry;
   private skillRegistry?: SkillRegistry;
   private defaultAdapter?: string;
@@ -103,6 +105,7 @@ export class OriumServer {
 
   constructor(options: ServerOptions) {
     this.port = options.port || 3000;
+    this.host = options.host || '127.0.0.1';
     this.adapterRegistry = options.adapterRegistry;
     this.skillRegistry = options.skillRegistry;
     this.defaultAdapter = options.defaultAdapter;
@@ -136,8 +139,8 @@ export class OriumServer {
       });
     });
 
-    server.listen(this.port, () => {
-      console.log(`Orium server running on http://localhost:${this.port}`);
+    server.listen(this.port, this.host, () => {
+      console.log(`Orium server running on http://${this.host}:${this.port}`);
     });
   }
 

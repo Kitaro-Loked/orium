@@ -11,6 +11,7 @@ import type { SkillRegistry } from '../skills/base.js';
 
 export interface WSServerOptions {
   port?: number;
+  host?: string;
   adapterRegistry: AdapterRegistry;
   skillRegistry?: SkillRegistry;
   defaultAdapter?: string;
@@ -26,6 +27,7 @@ interface WSClient {
 
 export class OriumWebSocketServer {
   private port: number;
+  private host: string;
   private adapterRegistry: AdapterRegistry;
   private skillRegistry?: SkillRegistry;
   private defaultAdapter?: string;
@@ -34,6 +36,7 @@ export class OriumWebSocketServer {
 
   constructor(options: WSServerOptions) {
     this.port = options.port || 3001;
+    this.host = options.host || '127.0.0.1';
     this.adapterRegistry = options.adapterRegistry;
     this.skillRegistry = options.skillRegistry;
     this.defaultAdapter = options.defaultAdapter;
@@ -72,8 +75,8 @@ export class OriumWebSocketServer {
       this.send(client, { type: 'connected', clientId });
     });
 
-    httpServer.listen(this.port, () => {
-      console.log(`Orium WebSocket server running on ws://localhost:${this.port}`);
+    httpServer.listen(this.port, this.host, () => {
+      console.log(`Orium WebSocket server running on ws://${this.host}:${this.port}`);
     });
   }
 
