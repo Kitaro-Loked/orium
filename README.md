@@ -47,40 +47,39 @@ Orium is a **unified, open-source AI infrastructure** that combines four powerfu
 
 ## 🚀 Quick Start
 
-### One-Line Install
+### Install via npm (Recommended)
 
 ```bash
-curl -fsSL https://orium.dev/install | sh
+npm install -g orium
 ```
 
-### Or Clone & Run
+### Or Clone & Build
 
 ```bash
 git clone https://github.com/Kitaro-Loked/orium.git
 cd orium
 npm install
 npm run build
-npm start
 ```
 
 ### Interactive Setup
 
 ```bash
 # Recommended first-time setup
-npx orium onboard
+orium onboard
 
 # Or use the wizard
-npx orium init
+orium init
 ```
 
 ### Start Chatting
 
 ```bash
 # CLI chat
-npx orium chat
+orium chat
 
 # Start Web UI + API server
-npx orium serve
+orium serve
 
 # Open http://localhost:3000/ui/v3/ for the web interface
 ```

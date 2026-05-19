@@ -37,8 +37,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/orium.git"
+    "url": "https://github.com/Kitaro-Loked/orium.git"
   },
+  "bugs": {
+    "url": "https://github.com/Kitaro-Loked/orium/issues"
+  },
+  "homepage": "https://github.com/Kitaro-Loked/orium#readme",
   "dependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/ws": "^8.18.1",
