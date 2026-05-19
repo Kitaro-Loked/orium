@@ -1,0 +1,56 @@
+# Orium Configuration Template
+
+orium:
+  version: "0.1.0"
+
+  # Runtime settings
+  runtime:
+    mode: "hybrid" # local | cloud | hybrid
+    workers: 4
+    timeout: 30000 # ms
+
+  # Memory configuration
+  memory:
+    working_capacity: 7
+    short_term_capacity: 100
+    long_term_backend: "sqlite" # sqlite | postgres | redis | custom
+    vector_db: "none" # none | chroma | pinecone | qdrant
+
+  # Model adapters
+  adapters:
+    openai:
+      enabled: true
+      api_key: "${OPENAI_API_KEY}"
+      base_url: "https://api.openai.com/v1"
+      default_model: "gpt-4o-mini"
+    
+    claude:
+      enabled: false
+      api_key: "${ANTHROPIC_API_KEY}"
+    
+    ollama:
+      enabled: false
+      base_url: "http://localhost:11434"
+
+  # Agent settings
+  agents:
+    auto_discovery: true
+    max_concurrent: 10
+    retry_policy:
+      max_retries: 3
+      backoff: "exponential"
+
+  # Tool settings
+  tools:
+    mcp_enabled: true
+    allowed_tools:
+      - "*" # Allow all, or specify list
+    sandbox:
+      enabled: true
+      allowed_commands: []
+
+  # Logging
+  logging:
+    level: "info" # debug | info | warn | error
+    format: "json" # json | pretty
+    output: "stdout" # stdout | file | both

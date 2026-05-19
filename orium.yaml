@@ -1,0 +1,22 @@
+version: 0.1.0
+runtime:
+  mode: hybrid
+  workers: 4
+  timeout: 30000
+adapters: {}
+routing:
+  strategy: fastest
+  failover: true
+  maxRetries: 3
+tokenPools: {}
+memory:
+  workingCapacity: 7
+  shortTermCapacity: 100
+  longTermBackend: sqlite
+tools:
+  mcpEnabled: true
+  allowedTools:
+    - '*'
+logging:
+  level: info
+  format: pretty

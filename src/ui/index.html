@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orium - Universal AI Chat</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">◈</span>
+          <span class="logo-text">Orium</span>
+        </div>
+        <button class="new-chat-btn" id="newChatBtn">
+          <span>+</span> 新对话
+        </button>
+      </div>
+
+      <div class="sidebar-section">
+        <h3>对话历史</h3>
+        <div class="chat-list" id="chatList">
+          <!-- Dynamic -->
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h3>模型</h3>
+        <div class="model-list" id="modelList">
+          <!-- Dynamic -->
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h3>技能</h3>
+        <div class="skill-list" id="skillList">
+          <!-- Dynamic -->
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="settings-btn" id="settingsBtn">⚙️ 设置</button>
+      </div>
+    </aside>
+
+    <!-- Mobile Sidebar Toggle -->
+    <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+
+    <!-- Main Chat Area -->
+    <main class="chat-container">
+      <!-- Top Bar -->
+      <header class="chat-header">
+        <div class="header-title" id="headerTitle">新对话</div>
+        <div class="header-actions">
+          <span class="connection-status" id="connectionStatus">●</span>
+          <button class="header-btn" id="clearBtn" title="清空对话">🗑️</button>
+          <button class="header-btn" id="exportBtn" title="导出">📥</button>
+        </div>
+      </header>
+
+      <!-- Messages Area -->
+      <div class="messages-area" id="messagesArea">
+        <div class="welcome-screen" id="welcomeScreen">
+          <div class="welcome-logo">◈</div>
+          <h1>Orium</h1>
+          <p>The Foundational Element of Intelligence</p>
+          <div class="quick-actions">
+            <button class="quick-btn" data-prompt="解释一下快速排序算法">🔄 快速排序</button>
+            <button class="quick-btn" data-prompt="查一下贵州茅台的股价">📈 股票查询</button>
+            <button class="quick-btn" data-prompt="搜索最新的 AI 新闻">🔍 AI 新闻</button>
+            <button class="quick-btn" data-prompt="写一个 Python HTTP 服务器">🐍 HTTP 服务器</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Typing Indicator -->
+      <div class="typing-indicator" id="typingIndicator" style="display: none;">
+        <span></span><span></span><span></span>
+      </div>
+
+      <!-- Input Area -->
+      <footer class="input-area">
+        <div class="input-toolbar">
+          <button class="tool-btn" id="imageBtn" title="发送图片">🖼️</button>
+          <button class="tool-btn" id="fileBtn" title="上传文件">📎</button>
+          <button class="tool-btn" id="skillBtn" title="技能">🛠️</button>
+          <input type="file" id="fileInput" style="display: none;" accept="image/*,.txt,.pdf,.md">
+        </div>
+        <div class="input-box">
+          <textarea 
+            id="messageInput" 
+            placeholder="输入消息... (Shift+Enter 换行, Enter 发送)"
+            rows="1"
+          ></textarea>
+          <button class="send-btn" id="sendBtn">➤</button>
+        </div>
+        <div class="input-hint">
+          <span>Enter 发送 · Shift+Enter 换行 · / 命令</span>
+        </div>
+      </footer>
+    </main>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>设置</h2>
+          <button class="modal-close" id="closeSettings">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="setting-group">
+            <label>系统提示词</label>
+            <textarea id="systemPrompt" rows="3">You are a helpful assistant.</textarea>
+          </div>
+          <div class="setting-group">
+            <label>Temperature: <span id="tempValue">0.7</span></label>
+            <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7">
+          </div>
+          <div class="setting-group">
+            <label>Max Tokens</label>
+            <input type="number" id="maxTokens" value="4096" min="100" max="128000">
+          </div>
+          <div class="setting-group">
+            <label>WebSocket 地址</label>
+            <input type="text" id="wsUrl" value="ws://localhost:3001">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-primary" id="saveSettings">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Skill Panel -->
+    <div class="skill-panel" id="skillPanel">
+      <div class="panel-header">
+        <h3>技能管理</h3>
+        <button class="panel-close" id="closeSkillPanel">✕</button>
+      </div>
+      <div class="panel-body" id="skillPanelBody">
+        <!-- Dynamic -->
+      </div>
+    </div>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
